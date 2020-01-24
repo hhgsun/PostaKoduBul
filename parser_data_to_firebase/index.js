@@ -35,10 +35,10 @@ async function sehirEkle(sehir) {
     }
 }
 
-async function ilceEkle(ilce, sehirKey) {
+async function ilceEkle(ilce, sehir) {
     if (isFirebaseSet) {
         return await firebase.firestore().collection('ilceler').add({
-            'sehirKey': sehirKey,
+            'sehir': sehir,
             'ilce': ilce
         }).then((ilce) => {
             return ilce.id;
@@ -48,10 +48,10 @@ async function ilceEkle(ilce, sehirKey) {
     }
 }
 
-async function mahalleEkle(mahalle, ilceKey, postaKodu) {
+async function mahalleEkle(mahalle, ilce, postaKodu) {
     if (isFirebaseSet) {
         return await firebase.firestore().collection('mahalleler').add({
-            'ilceKey': ilceKey,
+            'ilce': ilce,
             'mahalle': mahalle,
             'postaKodu': postaKodu,
         }).then(() => {
@@ -76,12 +76,11 @@ fs.readFile('tumdata.json', 'utf8', async function (err, fileData) {
             const postaKodu = data[key]['PK'].trim();
 
             // yeni sehirler listesi
-            let sehirKey = isFirebaseSet ? null : 1;
             if (sehirler.includes(sehir) == false) {
                 sehirler.push(sehir);
                 console.log('sehir ekle');
-                sehirKey = await sehirEkle(sehir);
-                console.log('sehir eklendi', sehirKey);
+                await sehirEkle(sehir);
+                console.log('sehir eklendi', sehir);
             }
 
             // yeni ilceler listesi
@@ -92,25 +91,25 @@ fs.readFile('tumdata.json', 'utf8', async function (err, fileData) {
                     break;
                 }
             }
-            let ilceKey = isFirebaseSet ? null : 1;
-            if (!found && sehirKey) {
+            if (!found) {
                 ilceler.push({
                     'parent': sehir,
                     'ilce': ilce
                 });
                 console.log('   ilce ekle');
-                ilceKey = await ilceEkle(ilce, sehirKey);
-                console.log('   ilce eklendi', ilceKey);
+                await ilceEkle(ilce, sehir);
+                console.log('   ilce eklendi', ilce);
             }
 
-            if (ilceKey) {
+            // mahalle ekle
+            if (ilce) {
                 mahalleler.push({
                     'mahalle': mahalle,
                     'postaKodu': postaKodu
                 });
                 console.log('       mahalle ekle');
-                await mahalleEkle(mahalle, ilceKey, postaKodu);
-                console.log('       mahalle eklendi');
+                await mahalleEkle(mahalle, ilce, postaKodu);
+                console.log('       mahalle eklendi', postaKodu);
             }
 
         }

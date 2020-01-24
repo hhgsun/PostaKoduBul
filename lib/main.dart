@@ -1,13 +1,74 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:postakodubul/loading_page.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:postakodubul/sehirler_page.dart';
+
+import 'loading_page.dart';
 
 void main() => runApp(PostaKoduBulApp());
 
-class PostaKoduBulApp extends StatelessWidget {
+class PostaKoduBulApp extends StatefulWidget {
+  @override
+  _PostaKoduBulAppState createState() => _PostaKoduBulAppState();
+}
+
+class _PostaKoduBulAppState extends State<PostaKoduBulApp> {
+  List<String> _sehirler = [];
+  List<Map> _ilceler = [];
+  List<Map> _mahalleler = [];
+
+  Future<bool> loadAsset() async {
+    return await rootBundle
+        .loadString('assets/files/tumdata.json')
+        .then((stack) {
+      print("convert start");
+      convertToList(stack);
+      print("convert finish " + this._sehirler.length.toString());
+      return true;
+    });
+  }
+
+  void convertToList(String stack) {
+    var allItems = json.decode(stack)['Sheet1'];
+    for (var item in allItems) {
+      String _il = item['il'].toString().trim();
+      String _ilce = item['ilçe'].toString().trim();
+      String _mahalle = item['Mahalle'].toString().trim();
+      String _postaKodu = item['PK'].toString().trim();
+
+      // sehir
+      if (_sehirler.contains(_il) == false) {
+        _sehirler.add(_il);
+      }
+
+      // ilce
+      bool found = false;
+      for (var ilce in _ilceler) {
+        if (ilce['ilce'] == _ilce && ilce['il'] == _il) {
+          found = true;
+        }
+      }
+      if (!found) {
+        _ilceler.add({'ilce': _ilce, 'il': _il});
+      }
+
+      // mahalle
+      _mahalleler.add({
+        'ilce': _ilce,
+        'il': _il,
+        'mahalle': _mahalle,
+        'postaKodu': _postaKodu
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    this.loadAsset();
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -15,62 +76,21 @@ class PostaKoduBulApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: StreamBuilder<QuerySnapshot>(
-        stream: Firestore.instance.collection('sehirler').snapshots(),
-        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (snapshot.hasError) return new Text('Error: ${snapshot.error}');
-          switch (snapshot.connectionState) {
-            case ConnectionState.waiting:
-              return LoadingPage();
-            default:
-              return SehirlerPage(sehirlerDocuments: snapshot.data.documents);
+      home: FutureBuilder(
+        future: this.loadAsset(),
+        builder: (context, snapshot) {
+          print(this._sehirler.length);
+          if (this._sehirler.length == 0) {
+            return LoadingPage();
+          } else if (this._sehirler.length > 0) {
+            return SehirlerPage(
+                sehirler: this._sehirler,
+                ilceler: this._ilceler,
+                mahalleler: this._mahalleler);
           }
         },
       ),
       debugShowCheckedModeBanner: false,
-    );
-  }
-}
-
-class RootPage extends StatefulWidget {
-  @override
-  _RootPageState createState() => _RootPageState();
-}
-
-class _RootPageState extends State<RootPage> {
-  void _incrementCounter() {
-    /* Firestore.instance.collection('sehirler').getDocuments().then((onValue) {
-      onValue.documents.forEach((f) {
-        print(f.data);
-      });
-    }); */
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Şehirler"),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: Firestore.instance.collection('sehirler').snapshots(),
-        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (snapshot.hasError) return new Text('Error: ${snapshot.error}');
-          switch (snapshot.connectionState) {
-            case ConnectionState.waiting:
-              return new Text('Loading...');
-            default:
-              return new ListView(
-                children:
-                    snapshot.data.documents.map((DocumentSnapshot document) {
-                  return new ListTile(
-                    title: new Text(document['sehir']),
-                  );
-                }).toList(),
-              );
-          }
-        },
-      ),
     );
   }
 }

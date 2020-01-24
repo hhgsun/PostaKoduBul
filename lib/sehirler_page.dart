@@ -1,11 +1,13 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:postakodubul/ilceler_page.dart';
 
 class SehirlerPage extends StatefulWidget {
-  SehirlerPage({Key key, this.sehirlerDocuments}) : super(key: key);
+  SehirlerPage({Key key, this.sehirler, this.ilceler, this.mahalleler})
+      : super(key: key);
 
-  final List<DocumentSnapshot> sehirlerDocuments;
+  final List<String> sehirler;
+  final List<Map> ilceler;
+  final List<Map> mahalleler;
 
   @override
   _SehirlerPageState createState() => _SehirlerPageState();
@@ -19,18 +21,13 @@ class _SehirlerPageState extends State<SehirlerPage> {
         title: Text('Şehir Seçiniz'),
       ),
       body: new ListView(
-        children: widget.sehirlerDocuments.map((DocumentSnapshot document) {
+        children: widget.sehirler.map((String sehir) {
           return new ListTile(
-            title: new Text(document['sehir']),
+            title: new Text(sehir),
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => IlcelerPage(
-                    secilenSehir: {
-                      'sehir': document['sehir'],
-                      'sehirKey': document.documentID
-                    },
-                  ),
+                  builder: (context) => IlcelerPage(secilenSehir: sehir, ilceler: widget.ilceler, mahalleler: widget.mahalleler),
                 ),
               );
             },

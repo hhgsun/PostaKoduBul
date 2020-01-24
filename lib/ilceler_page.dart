@@ -1,58 +1,56 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:postakodubul/loading_page.dart';
 import 'package:postakodubul/mahalleler_page.dart';
 
 class IlcelerPage extends StatefulWidget {
-  IlcelerPage({Key key, this.secilenSehir}) : super(key: key);
+  IlcelerPage({Key key, this.secilenSehir, this.ilceler, this.mahalleler})
+      : super(key: key);
 
-  final Map<String, dynamic> secilenSehir;
+  final String secilenSehir;
+  final List<Map> ilceler;
+  final List<Map> mahalleler;
 
   @override
   _IlcelerPageState createState() => _IlcelerPageState();
 }
 
 class _IlcelerPageState extends State<IlcelerPage> {
-  
+  List<Map> ilceListesi = [];
+
+  @override
+  void initState() {
+    widget.ilceler.forEach((f) {
+      if (f['il'] == widget.secilenSehir) {
+        ilceListesi.add(f);
+      }
+    });
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.secilenSehir['sehir']),
+        title: Text(widget.secilenSehir),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: Firestore.instance
-            .collection('ilceler')
-            .where('sehirKey', isEqualTo: widget.secilenSehir['sehirKey'])
-            .snapshots(),
-        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (snapshot.hasError) return new Text('Hata: ${snapshot.error}');
-          switch (snapshot.connectionState) {
-            case ConnectionState.waiting:
-              return LoadingPage();
-            default:
-              return new ListView(
-                children:
-                    snapshot.data.documents.map((DocumentSnapshot document) {
-                  return new ListTile(
-                    title: new Text(document['ilce']),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => MahallelerPage(
-                            secilenIlce: {
-                              'ilce': document['ilce'],
-                              'ilceKey': document.documentID
-                            },
-                          ),
-                        ),
-                      );
+      body: ListView(
+        children: ilceListesi.map((Map document) {
+          return new ListTile(
+            title: new Text(document['ilce']),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => MahallelerPage(
+                    secilenIlce: {
+                      'ilce': document['ilce'],
+                      'il': widget.secilenSehir
                     },
-                  );
-                }).toList(),
+                    mahalleler: widget.mahalleler,
+                  ),
+                ),
               );
-          }
-        },
+            },
+          );
+        }).toList(),
       ),
     );
   }
